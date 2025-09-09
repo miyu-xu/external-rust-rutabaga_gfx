@@ -50,12 +50,21 @@ rust_library {
     cfgs: [
         "gfxstream_unstable",
     ],
+    shared_libs: [
+        "libc++",
+        "libbase",
+    ],
     target: {
         android64: {
             compile_multilib: "64",
             enabled: true,
             static_libs: [
                 "libgfxstream_backend",
+            ],
+            shared_libs: [
+                "libnativewindow",
+                "libcutils",
+                "liblog",
             ],
         },
         linux_glibc_x86_64: {

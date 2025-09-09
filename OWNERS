@@ -1,13 +1,7 @@
-# ChromeOS
-ryanneph@google.com
-dawnhan@google.com
-
-# Cuttlefish
+gurchetansingh@google.com
 natsu@google.com
+cstout@google.com
+jeongik@google.com
+dgilhooley@google.com
 
-# Auto
-gurchetansingh@chromium.org
-
-# Windows
-kaiyili@google.com
-colindr@google.com
+include platform/system/core:main:/janitors/OWNERS
