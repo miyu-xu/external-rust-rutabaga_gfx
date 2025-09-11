@@ -27,6 +27,7 @@ license {
 rust_library {
     name: "librutabaga_gfx_upstream",
     host_supported: true,
+    vendor_available: true,
     crate_name: "rutabaga_gfx",
     cargo_env_compat: true,
     cargo_pkg_version: "0.1.62",
@@ -39,7 +40,7 @@ rust_library {
         "libcfg_if",
         "liblibc",
         "liblog_rust",
-        "libmesa3d_util",
+        "libmesa3d_util_rutabaga",
         "libserde",
         "libserde_json",
         "libthiserror",
@@ -48,6 +49,7 @@ rust_library {
     proc_macros: ["libremain"],
     apex_available: ["com.android.virt"],
     cfgs: [
+        "fence_passing_option1",
         "gfxstream_unstable",
     ],
     shared_libs: [
@@ -55,9 +57,8 @@ rust_library {
         "libbase",
     ],
     target: {
-        android64: {
+        android: {
             compile_multilib: "64",
-            enabled: true,
             static_libs: [
                 "libgfxstream_backend",
             ],
