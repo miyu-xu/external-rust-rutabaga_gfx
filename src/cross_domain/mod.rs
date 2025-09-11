@@ -35,11 +35,26 @@ use zerocopy::FromBytes;
 use zerocopy::Immutable;
 use zerocopy::IntoBytes;
 
+use crate::context_common::ContextResource;
+use crate::context_common::ContextResources;
 use crate::cross_domain::cross_domain_protocol::*;
 use crate::rutabaga_core::RutabagaComponent;
 use crate::rutabaga_core::RutabagaContext;
 use crate::rutabaga_core::RutabagaResource;
-use crate::rutabaga_utils::*;
+use crate::rutabaga_utils::Resource3DInfo;
+use crate::rutabaga_utils::ResourceCreateBlob;
+use crate::rutabaga_utils::RutabagaChannel;
+use crate::rutabaga_utils::RutabagaComponentType;
+use crate::rutabaga_utils::RutabagaError;
+use crate::rutabaga_utils::RutabagaFence;
+use crate::rutabaga_utils::RutabagaFenceHandler;
+use crate::rutabaga_utils::RutabagaIovec;
+use crate::rutabaga_utils::RutabagaResult;
+use crate::rutabaga_utils::RUTABAGA_BLOB_FLAG_USE_MAPPABLE;
+use crate::rutabaga_utils::RUTABAGA_BLOB_MEM_GUEST;
+use crate::rutabaga_utils::RUTABAGA_MAP_ACCESS_READ;
+use crate::rutabaga_utils::RUTABAGA_MAP_ACCESS_RW;
+use crate::rutabaga_utils::RUTABAGA_MAP_CACHE_CACHED;
 use crate::DrmFormat;
 use crate::ImageAllocationInfo;
 use crate::ImageMemoryRequirements;
@@ -75,14 +90,8 @@ enum RingWrite<'a, T> {
     WriteFromPipe(CrossDomainReadWrite, &'a mut ReadPipe, bool),
 }
 
-type CrossDomainResources = Arc<Mutex<Map<u32, CrossDomainResource>>>;
 type CrossDomainJobs = Mutex<Option<VecDeque<CrossDomainJob>>>;
 type CrossDomainItemState = Arc<Mutex<CrossDomainItems>>;
-
-struct CrossDomainResource {
-    handle: Option<Arc<MesaHandle>>,
-    backing_iovecs: Option<Vec<RutabagaIovec>>,
-}
 
 struct CrossDomainItems {
     descriptor_id: u32,
@@ -92,7 +101,7 @@ struct CrossDomainItems {
 }
 
 struct CrossDomainState {
-    context_resources: CrossDomainResources,
+    context_resources: ContextResources,
     query_ring_id: u32,
     channel_ring_id: u32,
     connection: Option<Tube>,
@@ -111,7 +120,7 @@ struct CrossDomainContext {
     channels: Option<Vec<RutabagaChannel>>,
     gralloc: Arc<Mutex<RutabagaGralloc>>,
     state: Option<Arc<CrossDomainState>>,
-    context_resources: CrossDomainResources,
+    context_resources: ContextResources,
     item_state: CrossDomainItemState,
     fence_handler: RutabagaFenceHandler,
     worker_thread: Option<thread::JoinHandle<RutabagaResult<()>>>,
@@ -169,7 +178,7 @@ impl CrossDomainState {
     fn new(
         query_ring_id: u32,
         channel_ring_id: u32,
-        context_resources: CrossDomainResources,
+        context_resources: ContextResources,
         connection: Option<Tube>,
     ) -> CrossDomainState {
         CrossDomainState {
@@ -981,7 +990,7 @@ impl RutabagaContext for CrossDomainContext {
         if resource.blob_mem == RUTABAGA_BLOB_MEM_GUEST {
             self.context_resources.lock().unwrap().insert(
                 resource.resource_id,
-                CrossDomainResource {
+                ContextResource {
                     handle: None,
                     backing_iovecs: resource.backing_iovecs.take(),
                 },
@@ -989,7 +998,7 @@ impl RutabagaContext for CrossDomainContext {
         } else if let Some(ref handle) = resource.handle {
             self.context_resources.lock().unwrap().insert(
                 resource.resource_id,
-                CrossDomainResource {
+                ContextResource {
                     handle: Some(handle.clone()),
                     backing_iovecs: None,
                 },

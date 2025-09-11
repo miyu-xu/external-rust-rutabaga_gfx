@@ -22,8 +22,39 @@ use serde::Serialize;
 use crate::cross_domain::CrossDomain;
 #[cfg(feature = "gfxstream")]
 use crate::gfxstream::Gfxstream;
+use crate::magma::MagmaVirtioGpu;
 use crate::rutabaga_2d::Rutabaga2D;
-use crate::rutabaga_utils::*;
+use crate::rutabaga_utils::GfxstreamFlags;
+use crate::rutabaga_utils::Resource3DInfo;
+use crate::rutabaga_utils::ResourceCreate3D;
+use crate::rutabaga_utils::ResourceCreateBlob;
+use crate::rutabaga_utils::RutabagaChannel;
+use crate::rutabaga_utils::RutabagaComponentType;
+use crate::rutabaga_utils::RutabagaDebugHandler;
+use crate::rutabaga_utils::RutabagaError;
+use crate::rutabaga_utils::RutabagaFence;
+use crate::rutabaga_utils::RutabagaFenceHandler;
+use crate::rutabaga_utils::RutabagaImportData;
+use crate::rutabaga_utils::RutabagaIovec;
+use crate::rutabaga_utils::RutabagaResult;
+use crate::rutabaga_utils::RutabagaWsi;
+use crate::rutabaga_utils::Transfer3D;
+use crate::rutabaga_utils::VirglRendererFlags;
+use crate::rutabaga_utils::VulkanInfo;
+use crate::rutabaga_utils::RUTABAGA_BLOB_FLAG_USE_CROSS_DEVICE;
+use crate::rutabaga_utils::RUTABAGA_BLOB_FLAG_USE_SHAREABLE;
+use crate::rutabaga_utils::RUTABAGA_CAPSET_CROSS_DOMAIN;
+use crate::rutabaga_utils::RUTABAGA_CAPSET_DRM;
+use crate::rutabaga_utils::RUTABAGA_CAPSET_GFXSTREAM_COMPOSER;
+use crate::rutabaga_utils::RUTABAGA_CAPSET_GFXSTREAM_GLES;
+use crate::rutabaga_utils::RUTABAGA_CAPSET_GFXSTREAM_VULKAN;
+use crate::rutabaga_utils::RUTABAGA_CAPSET_MAGMA;
+use crate::rutabaga_utils::RUTABAGA_CAPSET_VENUS;
+use crate::rutabaga_utils::RUTABAGA_CAPSET_VIRGL;
+use crate::rutabaga_utils::RUTABAGA_CAPSET_VIRGL2;
+use crate::rutabaga_utils::RUTABAGA_CONTEXT_INIT_CAPSET_ID_MASK;
+use crate::rutabaga_utils::RUTABAGA_FLAG_FENCE_HOST_SHAREABLE;
+use crate::rutabaga_utils::RUTABAGA_FLAG_INFO_RING_IDX;
 use crate::snapshot::RutabagaSnapshotReader;
 use crate::snapshot::RutabagaSnapshotWriter;
 #[cfg(feature = "virgl_renderer")]
@@ -417,9 +448,9 @@ const RUTABAGA_CAPSETS: [RutabagaCapsetInfo; 9] = [
         name: "drm",
     },
     RutabagaCapsetInfo {
-        capset_id: RUTABAGA_CAPSET_GFXSTREAM_MAGMA,
-        component: RutabagaComponentType::Gfxstream,
-        name: "gfxstream-magma",
+        capset_id: RUTABAGA_CAPSET_MAGMA,
+        component: RutabagaComponentType::Magma,
+        name: "magma",
     },
     RutabagaCapsetInfo {
         capset_id: RUTABAGA_CAPSET_GFXSTREAM_GLES,
@@ -1351,7 +1382,6 @@ impl RutabagaBuilder {
 
         if self.capset_mask != 0 {
             let supports_gfxstream = capset_enabled(RUTABAGA_CAPSET_GFXSTREAM_VULKAN)
-                | capset_enabled(RUTABAGA_CAPSET_GFXSTREAM_MAGMA)
                 | capset_enabled(RUTABAGA_CAPSET_GFXSTREAM_GLES)
                 | capset_enabled(RUTABAGA_CAPSET_GFXSTREAM_COMPOSER);
             let supports_virglrenderer = capset_enabled(RUTABAGA_CAPSET_VIRGL2)
@@ -1422,9 +1452,13 @@ impl RutabagaBuilder {
                 rutabaga_components.insert(RutabagaComponentType::Gfxstream, gfxstream);
 
                 push_capset(RUTABAGA_CAPSET_GFXSTREAM_VULKAN);
-                push_capset(RUTABAGA_CAPSET_GFXSTREAM_MAGMA);
                 push_capset(RUTABAGA_CAPSET_GFXSTREAM_GLES);
                 push_capset(RUTABAGA_CAPSET_GFXSTREAM_COMPOSER);
+            }
+
+            if capset_enabled(RUTABAGA_CAPSET_MAGMA) {
+                let magma = MagmaVirtioGpu::init(fence_handler.clone())?;
+                rutabaga_components.insert(RutabagaComponentType::Magma, magma);
             }
 
             let cross_domain = CrossDomain::init(self.channels, fence_handler.clone())?;

@@ -15,12 +15,14 @@ use mesa3d_util::MesaError;
 use mesa3d_util::MesaHandle;
 
 use crate::rutabaga_gralloc::formats::*;
-#[cfg(feature = "minigbm")]
+#[cfg(feature = "gbm")]
 use crate::rutabaga_gralloc::minigbm::MinigbmDevice;
 use crate::rutabaga_gralloc::system_gralloc::SystemGralloc;
 #[cfg(feature = "vulkano")]
 use crate::rutabaga_gralloc::vulkano_gralloc::VulkanoGralloc;
-use crate::rutabaga_utils::*;
+use crate::rutabaga_utils::RutabagaError;
+use crate::rutabaga_utils::RutabagaResult;
+use crate::rutabaga_utils::VulkanInfo;
 
 const RUTABAGA_GRALLOC_BACKEND_SYSTEM: u32 = 1 << 0;
 const RUTABAGA_GRALLOC_BACKEND_GBM: u32 = 1 << 1;
@@ -266,7 +268,7 @@ impl RutabagaGralloc {
             grallocs.insert(GrallocBackend::System, system);
         }
 
-        #[cfg(feature = "minigbm")]
+        #[cfg(feature = "gbm")]
         if flags.uses_gbm() {
             // crosvm integration tests build with the "wl-dmabuf" feature, which translates in
             // rutabaga to the "minigbm" feature.  These tests run on hosts where a rendernode is
@@ -326,7 +328,7 @@ impl RutabagaGralloc {
         #[allow(clippy::let_and_return)]
         let mut _backend = GrallocBackend::System;
 
-        #[cfg(feature = "minigbm")]
+        #[cfg(feature = "gbm")]
         {
             // See note on "wl-dmabuf" and Kokoro in Gralloc::new().
             if self.grallocs.contains_key(&GrallocBackend::Minigbm) {

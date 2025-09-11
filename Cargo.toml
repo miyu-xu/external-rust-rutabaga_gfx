@@ -1,16 +1,25 @@
+[workspace]
+members = [
+    ".",
+    "ffi",
+    "kumquat/server",
+    "third_party/mesa3d/src/util/rust",
+    "third_party/mesa3d/src/virtio/protocols",
+]
+
 [package]
 name = "rutabaga_gfx"
 version = "0.1.61"
 authors = ["The ChromiumOS Authors + Android Open Source Project"]
 edition = "2021"
 description = "Handling virtio-gpu protocols"
-license-file = "LICENSE"
+license = "BSD-3-Clause"
 
 [features]
 gfxstream = []
 gfxstream_stub = []
 virgl_renderer = []
-minigbm = []
+gbm = []
 # Vulkano features are just a prototype and not integrated yet into the ChromeOS build system.
 vulkano = ["dep:vulkano"]
 x = []
@@ -24,14 +33,14 @@ serde_json = "1"
 thiserror = "1.0.23"
 serde = { version = "1.0", features = ["derive"] }
 zerocopy = { version = "0.8.13", features = ["derive"] }
-mesa3d_util = { path = "../third_party/mesa3d/src/util/rust/", version = "0.1.71" }
+mesa3d_util = { path = "third_party/mesa3d/src/util/rust/", version = "0.1.71" }
 
 # To build latest Vulkano, change version to git = "https://github.com/vulkano-rs/vulkano.git"
 vulkano = { version = "0.33.0", optional = true }
 
 [build-dependencies]
 pkg-config = "0.3"
-anyhow = { workspace = true }
+anyhow = "1"
 
 [dev-dependencies]
 tempfile = "3"

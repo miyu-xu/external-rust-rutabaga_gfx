@@ -5,10 +5,12 @@
 //! A crate for handling 2D and 3D virtio-gpu hypercalls, along with graphics
 //! swapchain allocation and mapping.
 
+mod context_common;
 mod cross_domain;
 mod generated;
 mod gfxstream;
 mod gfxstream_stub;
+mod magma;
 #[macro_use]
 mod macros;
 #[cfg(any(feature = "gfxstream", feature = "virgl_renderer"))]
